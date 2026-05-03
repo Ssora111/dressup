@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dress Up Game</title>
+    <style>
+        /* --- ИСПРАВЛЕНИЕ БЕСЯЧЕЙ МИГАЮЩЕЙ ПОЛОСКИ И ВЫДЕЛЕНИЯ --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Nunito', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none; 
+            -webkit-user-drag: none; 
+            outline: none; 
+        }
+
+        body {
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            cursor: url('cursor.png'), auto; 
+        }
+
+        /* --- ЯЧЕЙКА ДЛЯ ПОЙНТЕРА --- */
+        .start-menu-btn, .png-btn-small, .level-card, .modal-btn, .category-btn, .item-cell, .close-notepad, .btn-home, .btn-done, .end-cutscene-btn, .lvl-img-back-nav, #music-toggle-btn, .css-menu-btn {
+            cursor: url('pointer.PNG'), pointer !important;
+        }
+
+        .background-cat-img {
+            position: fixed;
+            bottom: -10px;
+            left: 20px;
+            width: 450px; 
+            height: auto;
+            z-index: -1; 
+            pointer-events: none; 
+        }
+
+        .game-container {
+            display: flex;
+            width: 900px;
+            height: 600px;
+            background-color: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative; 
+        }
+
+        /* --- ЭКРАН ЗАСТАВКИ --- */
+        .start-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1000; overflow: hidden; background-color: #ffe4e1;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        .start-bg-video {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;
+        }
+
+        .menu-circle {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            right: -180px; 
+            width: 480px;  
+            height: 480px; 
+            background-color: #b8e6d8; 
+            border-radius: 50%; z-index: 2;
+            box-shadow: -10px 0px 30px rgba(0,0,0,0.1);
+        }
+
+        /* --- КНОПКИ ЖЕСТКО ОПУЩЕНЫ ВНИЗ --- */
+        .menu-buttons { 
+            position: absolute;
+            top: 60%; /* <--- ЕСЛИ НАДО ДВИНУТЬ ВЫШЕ/НИЖЕ, МЕНЯЙ ЭТУ ЦИФРУ */
+            transform: translateY(-50%);
+            left: 60px;
+            display: flex; flex-direction: column; gap: 15px; z-index: 3; 
+        }
+
+        /* Новые CSS-кнопки */
+        .css-menu-btn {
+            background-color: #ffb6c1; 
+            border: 4px solid #ffffff; 
+            border-radius: 40px; 
+            width: 240px;
+            padding: 12px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            box-shadow: 0 6px 15px rgba(255, 182, 193, 0.4); 
+            transition: transform 0.1s;
+        }
+        .css-menu-btn:active {
+            transform: scale(0.95);
+        }
+        .css-menu-btn span.icon {
+            font-size: 24px;
+            filter: drop-shadow(1px 1px 0px rgba(0,0,0,0.1));
+        }
+
+        #music-toggle-btn {
+            position: relative;
+            font-size: 35px;
+            text-align: center;
+            width: 240px; 
+            margin-top: 30px;
+            transition: transform 0.1s;
+            z-index: 50;
+            pointer-events: auto;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+        }
+        #music-toggle-btn:active { transform: scale(0.9); }
+
+        .png-btn-small {
+            position: relative;
+            width: 130px; 
+            height: auto;
+            object-fit: contain;
+            transition: transform 0.1s;
+            z-index: 50;
+            pointer-events: auto;
+        }
+        .png-btn-small:active { transform: scale(0.92); }
+
+        /* --- МЕНЮ ВЫБОРА УРОВНЯ --- */
+        .levels-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #ebdcd0;
+            z-index: 1500; display: flex; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: 0.4s ease;
+        }
+        .levels-overlay.show { opacity: 1; visibility: visible; }
+
+        .levels-box {
+            background-color: #fcf4e8; border: none; border-radius: 35px;
+            width: 800px; height: 560px; position: relative;
+            display: flex; flex-direction: column; align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .lvl-decor-corner { position: absolute; pointer-events: none; z-index: 10; opacity: 0.9; }
+        .lvl-corner-1 { top: 20px; left: 20px; width: 50px; }
+        .lvl-corner-2 { top: 20px; right: 20px; width: 50px; }
+        .lvl-corner-3 { bottom: 20px; right: 20px; width: 80px; }
+
+        .lvl-img-header { position: absolute; top: -40px; width: 520px; height: 120px; z-index: 10; }
+
+        .lvl-img-back-nav {
+            position: absolute; top: 15px; left: 15px; width: 50px; z-index: 10; transition: 0.1s;
+        }
+        .lvl-img-back-nav:active { transform: scale(0.9); }
+
+        .levels-grid { margin-top: 80px; display: grid; grid-template-columns: repeat(2, 280px); gap: 50px 40px; justify-content: center; width: 100%; z-index: 5; }
+
+        .level-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; }
+
+        .level-card {
+            background-color: #a8a8a8; border: 4px solid #fff; border-radius: 15px;
+            width: 100%; aspect-ratio: 16 / 10; overflow: hidden; position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); transition: transform 0.1s;
+        }
+        .level-card:active { transform: translateY(2px); }
+        .level-card.locked::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1; }
+        .level-card img.bg { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .lock-img { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); width: 60px; z-index: 5; pointer-events: none; }
+
+        .card-status { position: absolute; top: 10px; right: 10px; padding: 4px 12px; border-radius: 15px; font-weight: 900; font-size: 11px; text-transform: uppercase; z-index: 2; background-color: #bceadd; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .card-info { position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px 10px 20px; text-align: center; color: white; font-weight: 900; font-size: 13px; z-index: 3; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); }
+
+        .btn-play-level-wrapper { position: absolute; bottom: -20px; z-index: 10; }
+        .levels-bottom-buttons { position: absolute; bottom: 20px; display: flex; gap: 40px; z-index: 10; }
+
+        /* --- ШТОРКИ ПЕРЕХОДА --- */
+        .curtains-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 4000; pointer-events: none; overflow: hidden; 
+        }
+        .curtain {
+            position: absolute; top: 0; width: 50.5%; height: 100%; object-fit: fill; 
+            transition: transform 1.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+        }
+        .curtain-left { left: 0; transform: translateX(-100%); }
+        .curtain-right { right: 0; transform: translateX(100%); }
+        .curtains-overlay.closed .curtain-left { transform: translateX(0); }
+        .curtains-overlay.closed .curtain-right { transform: translateX(0); }
+
+        /* --- КАТСЦЕНА --- */
+        #cutscene-view {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1800; background-color: #fff0f5; overflow: hidden;
+        }
+        .cutscene-bg { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        .cutscene-char-container {
+            position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%) translateY(100%);
+            width: 450px; height: 550px; z-index: 5;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .cutscene-char-container.pop-up { transform: translateX(-50%) translateY(0); }
+        .char-idle-bob { width: 100%; height: 100%; position: relative; }
+        .char-idle-bob.breathing { animation: idleBob 3s ease-in-out infinite; }
+        .cutscene-sprite, .cutscene-face, .cutscene-ending-layer { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; object-fit: contain; }
+        
+        .cutscene-dialogue-box {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 700px; height: 160px; background: rgba(255, 255, 255, 0.95); 
+            border: 4px solid #f8bbd0; border-radius: 25px; padding: 30px; 
+            box-shadow: 0 10px 25px rgba(248, 187, 208, 0.5); display: flex; 
+            justify-content: center; align-items: center; opacity: 0; 
+            transition: opacity 0.5s ease; z-index: 10;
+        }
+        .cutscene-dialogue-box.show { opacity: 1; }
+        .cutscene-text { color: #5d4037; font-size: 24px; font-weight: 800; text-align: center; }
+
+        .flying-comments-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; pointer-events: none; }
+        .toxic-comment {
+            position: absolute; background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px 20px 20px 0px; padding: 10px 15px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: flex; 
+            flex-direction: column; gap: 4px; opacity: 0; 
+            animation: flyComment 4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            max-width: 220px; z-index: 20;
+        }
+        .toxic-comment-header { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #888; font-weight: 700; }
+        .toxic-avatar { width: 22px; height: 22px; background: #ddd; border-radius: 50%; }
+        .toxic-text { font-size: 15px; color: #333; font-weight: 600; line-height: 1.2; }
+
+        @keyframes flyComment {
+            0% { transform: translateY(80px) scale(0.8); opacity: 0; }
+            10% { opacity: 1; transform: translateY(0px) scale(1); }
+            80% { opacity: 1; transform: translateY(-120px) scale(1); }
+            100% { transform: translateY(-180px) scale(0.8); opacity: 0; }
+        }
+
+        @keyframes idleBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+        .shake-anim { animation: shakeDrama 0.15s infinite; }
+        @keyframes shakeDrama { 0% { transform: translateX(-50%) rotate(0deg); } 25% { transform: translateX(calc(-50% - 3px)) rotate(-1deg); } 50% { transform: translateX(calc(-50% + 3px)) rotate(1deg); } 75% { transform: translateX(calc(-50% - 3px)) rotate(-1deg); } 100% { transform: translateX(-50%) rotate(0deg); } }
+
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.2); z-index: 3000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.2s ease; }
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+        .modal-box { background: #fff6ef; border: 4px solid #fff; border-radius: 20px; box-shadow: 0 0 0 4px #f8b4c4, 0 10px 25px rgba(0,0,0,0.15); width: 380px; padding: 35px 25px 25px; text-align: center; position: relative; transform: scale(0.8); transition: 0.2s ease; }
+        .modal-overlay.show .modal-box { transform: scale(1); }
+        .modal-header { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: #f8c3d3; color: white; padding: 6px 25px; border-radius: 25px; border: 3px solid #fff; box-shadow: 0 0 0 2px #f8b4c4; font-weight: 900; font-size: 15px; letter-spacing: 1px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+        .modal-icon { background: #fff; color: #f8b4c4; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; }
+        .modal-title { font-size: 22px; color: #333; margin-top: 5px; margin-bottom: 15px; font-weight: 600; }
+        .modal-text { font-size: 14px; color: #555; margin-bottom: 25px; line-height: 1.4; }
+        .modal-buttons { display: flex; justify-content: center; gap: 15px; }
+        .modal-btn { padding: 12px 35px; border: none; border-radius: 15px; font-weight: 900; font-size: 16px; transition: 0.1s; }
+        .btn-no { background: #f4e6d8; color: #b09783; box-shadow: 0 4px 0 #dfcdbd; }
+        .btn-no:active { transform: translateY(4px); box-shadow: 0 0 0 #dfcdbd; }
+        .btn-yes { background: #e57676; color: #fff; box-shadow: 0 4px 0 #cc6565; }
+        .btn-yes:active { transform: translateY(4px); box-shadow: 0 0 0 #cc6565; }
+
+        #ending-score { font-size: 40px; font-weight: 900; color: #f48fb1; margin-bottom: 20px; }
+
+        .notepad-overlay { position: absolute; inset: 0; z-index: 2000; background: rgba(0, 0, 0, 0.4); display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.3s ease; }
+        .notepad-overlay.show { opacity: 1; visibility: visible; }
+        .notepad-box { background-color: #fffdf6; border-radius: 12px; border: 3px solid #fff; width: 520px; min-height: 480px; padding: 50px 35px 30px; position: relative; box-shadow: 0 15px 30px rgba(0,0,0,0.2); }
+        .notepad-box::before { content: ''; position: absolute; top: 12px; left: 12px; right: 12px; bottom: 12px; border: 2px dashed #dcbca3; border-radius: 8px; pointer-events: none; }
+        .notepad-tab { position: absolute; left: -20px; width: 25px; height: 50px; border-radius: 8px 0 0 8px; z-index: -2; border: 2px solid #fff; }
+        .tab-1 { top: 80px; background-color: #ffb6c1; }
+        .tab-2 { top: 140px; background-color: #ffdab9; }
+        .tab-3 { top: 200px; background-color: #bceadd; }
+        .notepad-title { position: absolute; top: -25px; left: 50%; transform: translateX(-50%) rotate(2deg); background: #fffdf6; border: 3px solid #eaddcd; border-radius: 20px; padding: 8px 30px; color: #d89f81; font-size: 24px; font-weight: 900; box-shadow: 0 4px 0 #eaddcd; white-space: nowrap; z-index: 10; }
+        .notepad-content { font-size: 16px; color: #7a6555; line-height: 25px; text-align: left; font-family: 'Comic Sans MS', cursive; padding-right: 150px; }
+        .close-notepad { position: absolute; top: 18px; right: 20px; background: #ffb6c1; border: 2px solid #fff; color: white; width: 30px; height: 30px; border-radius: 50%; font-size: 16px; font-weight: bold; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 0 #e6a5af; transition: 0.1s; z-index: 10; }
+        
+        .chibi-explainer { position: absolute; bottom: 25px; right: 25px; width: 140px; z-index: 5; pointer-events: none; animation: floatChibi 2s ease-in-out infinite alternate; }
+        @keyframes floatChibi { 0% { transform: translateY(0px); } 100% { transform: translateY(-15px); } }
+
+        #game-ui { display: none; width: 100%; height: 100%; }
+        #game-ui.active { display: flex; }
+
+        .left-panel { flex: 1; position: relative; background: linear-gradient(to bottom, #ffe4e1, #fff0f5); border-right: 2px solid #f8bbd0; display: flex; flex-direction: column; align-items: center; }
+        .top-buttons { width: 100%; display: flex; justify-content: space-between; padding: 15px; position: absolute; top: 0; z-index: 10; }
+        .btn-home, .btn-done { background-color: transparent; border: none; padding: 0; transition: transform 0.1s; position: relative; z-index: 50; }
+        .btn-home:active, .btn-done:active { transform: scale(0.9); }
+        
+        .avatar-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        .layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; transform: scale(0.9); }
+        .cloth-anim { animation: clothFocus 0.08s ease-out forwards; }
+        @keyframes clothFocus { 0% { filter: blur(8px); } 100% { filter: blur(0px); } }
+        .bg-layer { object-fit: cover; transform: scale(1); }
+        .sleeping-cat { position: absolute; bottom: 90px; left: 20px; width: 120px; z-index: 5; pointer-events: none; }
+
+        .speech-bubble { 
+            position: absolute; right: calc(50% + 90px); top: 220px; 
+            background: white; border: 1px solid #ccc; border-radius: 20px; padding: 10px 15px; font-size: 14px; 
+            max-width: 180px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            opacity: 0; transform: scale(0.5); transform-origin: right center; transition: none; z-index: 20; 
+        }
+        .speech-bubble::after { content: ''; position: absolute; right: -10px; top: 50%; transform: translateY(-50%); border-width: 6px; border-style: solid; border-color: transparent transparent transparent white; }
+        .speech-bubble.show { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
+
+        .progress-container { position: absolute; bottom: 20px; width: 80%; left: 10%; text-align: center; z-index: 10; }
+        .progress-bar-bg { background-color: #fff; border: 2px dashed #f48fb1; border-radius: 15px; height: 20px; width: 100%; overflow: hidden; position: relative; }
+        .progress-fill { height: 100%; background: repeating-linear-gradient( 45deg, #ff80ab, #ff80ab 10px, #ff4081 10px, #ff4081 20px ); width: 0%; transition: width 0.3s ease; }
+        .progress-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; color: #d81b60; font-size: 12px; z-index: 5; }
+
+        .floating-score { position: absolute; top: -15px; left: 55%; font-weight: 900; font-size: 28px; pointer-events: none; z-index: 30; background-color: transparent; border: none; animation: floatDelta 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .float-plus { background: linear-gradient(180deg, #ffffff 0%, #00e676 40%, #00e676 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke: 1px #000; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.3)); }
+        .float-minus { background: linear-gradient(180deg, #ffffff 0%, #ff1744 40%, #ff1744 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke: 1px #000; filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.3)); }
+        @keyframes floatDelta { 0% { opacity: 0; transform: translateY(10px) scale(0.8); } 15% { opacity: 1; transform: translateY(0) scale(1.1); } 80% { opacity: 1; transform: translateY(-40px) scale(1); } 100% { opacity: 0; transform: translateY(-50px) scale(0.9); } }
+
+        .right-panel { flex: 1; background-color: #fff; display: flex; flex-direction: column; z-index: 2; }
+        .category-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 8px 10px; background-color: #fff0f5; border-bottom: 2px solid #f8bbd0; }
+        .category-btn { background-color: #eecfba; border: none; border-radius: 12px; padding: 6px 12px; font-size: 13px; font-weight: 900; font-family: 'Arial Black', Impact, sans-serif; color: #ffffff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4); text-transform: uppercase; position: relative; box-shadow: 0 4px 0 #cca88d, 0 5px 5px rgba(0,0,0,0.15); transition: all 0.1s; margin-bottom: 4px; z-index: 10; }
+        .category-btn.active { background-color: #ffb6c1; }
+
+        .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-auto-rows: min-content; gap: 20px; padding: 20px; overflow-y: auto; align-content: start; }
+        .item-cell { background-color: transparent; border: none; border-radius: 15px; overflow: hidden; aspect-ratio: 1 / 1; display: flex; justify-content: center; align-items: center; transition: transform 0.1s; position: relative; z-index: 10; }
+        .item-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .item-cell.equipped { box-shadow: inset 0 0 0 4px #c461b1; }
+    </style>
+</head>
+<body onclick="startAudioContext()">
+    
+    <!-- ФОНОВЫЙ КОТ -->
+    <img src="siberian_cat.PNG" class="background-cat-img" alt="Моя кошка">
+
+    <div class="game-container">
+        
+        <div id="curtains" class="curtains-overlay">
+            <img src="rightuh.jpg" class="curtain curtain-left" alt="Левая штора">
+            <img src="rightuh.jpg" class="curtain curtain-right" alt="Правая штора">
+        </div>
+
+        <div id="cutscene-view">
+            <img src="green.jpg" class="cutscene-bg">
+            <div class="cutscene-char-container" id="cutscene-char">
+                <div class="char-idle-bob" id="char-idle">
+                    <div id="intro-avatar-group">
+                        <img src="messy.PNG" class="cutscene-sprite">
+                        <img src="sadface.PNG" class="cutscene-face" id="cutscene-face-intro" style="display: none;">
+                    </div>
+                    <div id="ending-avatar-group" style="display: none; position: relative; width: 100%; height: 100%;">
+                        <img src="jiraikei.PNG" class="cutscene-ending-layer">
+                        <img id="end-layer-Носки" class="cutscene-ending-layer" style="display: none;">
+                        <img id="end-layer-Обувь" class="cutscene-ending-layer" style="display: none;">
+                        <img id="end-layer-Низ" class="cutscene-ending-layer" style="display: none;">
+                        <img id="end-layer-Верх" class="cutscene-ending-layer" style="display: none;">
+                        <img id="end-layer-Набор" class="cutscene-ending-layer" style="display: none;">
+                        <img id="end-layer-Волосы" class="cutscene-ending-layer" style="display: none;">
+                        <img id="end-layer-acc0" class="cutscene-ending-layer" style="display: none;">
+                        <img id="end-layer-acc1" class="cutscene-ending-layer" style="display: none;">
+                        <img src="sadface.PNG" class="cutscene-face" id="cutscene-face-end" style="display: none;">
+                    </div>
+                </div>
+            </div>
+            <div id="flying-comments-container" class="flying-comments-layer"></div>
+            <div class="cutscene-dialogue-box" id="cutscene-dialogue">
+                <div class="cutscene-text" id="cutscene-text"></div>
+            </div>
+            
+            <div id="ending-result-overlay" class="modal-overlay">
+                <div class="modal-box">
+                    <div class="modal-header"><span class="modal-icon">!</span>РЕЗУЛЬТАТ</div>
+                    <h3 class="modal-title" id="ending-title">УРОВЕНЬ ПРОЙДЕН</h3>
+                    <p class="modal-text" id="ending-subtitle" style="margin-bottom: 10px;">Текст</p>
+                    <div id="ending-score">100%</div>
+                    <div class="modal-buttons">
+                        <button class="modal-btn btn-no" id="btn-restart-end" style="display: none;" onclick="restartLevel()">ЗАНОВО</button>
+                        <button class="modal-btn btn-yes" onclick="backToMainMenuFromEnd()">В МЕНЮ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- === ОБНОВЛЕННЫЙ ЭКРАН ЗАСТАВКИ === -->
+        <div id="start-screen" class="start-screen">
+            <video class="start-bg-video" src="qual.MP4" autoplay loop muted playsinline></video>
+            <div class="menu-circle">
+                <!-- ВНУТРИ КРУГА ТОЛЬКО КНОПКИ -->
+                <div class="menu-buttons">
+                    <button class="css-menu-btn" onclick="showLevelsMenu()">
+                        <span>ИГРАТЬ</span><span class="icon"></span>
+                    </button>
+                    <button class="css-menu-btn" onclick="openSettings()">
+                        <span>ПРАВИЛА</span><span class="icon"></span>
+                    </button>
+                    <button class="css-menu-btn" onclick="alert('Не уйдешь, броски')">
+                        <span>ВЫЙТИ</span><span class="icon"></span>
+                    </button>
+                    <div id="music-toggle-btn" onclick="toggleMusic(event)">🔊</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="levels-screen" class="levels-overlay">
+            <div class="levels-box">
+                <img src="exit.PNG" class="lvl-img-back-nav" onclick="backToMainMenu()">
+                <img src="levels.PNG" class="lvl-img-header">
+                <img src="pastel.PNG" class="lvl-decor-corner lvl-corner-1">
+                <img src="starspastel.PNG" class="lvl-decor-corner lvl-corner-2">
+                <img src="strawberry.PNG" class="lvl-decor-corner lvl-corner-3">
+                <div class="levels-grid">
+                    <div class="level-wrapper">
+                        <div class="level-card unlocked" onclick="startLevel1()">
+                            <div class="card-status unlocked">ОТКРЫТО</div>
+                            <img src="jiraibad.jpg" class="bg"> 
+                            <div class="card-info">УРОВЕНЬ 1: Джирай кей</div>
+                        </div>
+                        <div class="btn-play-level-wrapper">
+                            <img src="play.PNG" class="png-btn-small" onclick="startLevel1()">
+                        </div>
+                    </div>
+                    <div class="level-wrapper">
+                        <div class="level-card locked"><img src="lock.PNG" class="lock-img"><img src="cold.jpg" class="bg"><div class="card-info">УРОВЕНЬ 2: Холодная погода</div></div>
+                    </div>
+                    <div class="level-wrapper">
+                        <div class="level-card locked"><img src="lock.PNG" class="lock-img"><img src="dark.jpg" class="bg"><div class="card-info">УРОВЕНЬ 3: Бальная вечеринка</div></div>
+                    </div>
+                    <div class="level-wrapper">
+                        <div class="level-card locked"><img src="lock.PNG" class="lock-img"><img src="seifukugirl.jpg" class="bg"><div class="card-info">УРОВЕНЬ 4: Школьный дресс-код</div></div>
+                    </div>
+                </div>
+                <div class="levels-bottom-buttons">
+                    <img src="rules.PNG" class="png-btn-small" onclick="openSettings()">
+                    <img src="exit.PNG" class="png-btn-small" onclick="backToMainMenu()">
+                </div>
+            </div>
+        </div>
+
+        <div id="game-ui">
+            <div class="left-panel">
+                <div class="top-buttons">
+                    <button class="btn-home" onclick="openConfirmModal()"><img src="home.PNG" style="height: 100px;"></button>
+                    <button class="btn-done" onclick="finishGame()"><img src="done.PNG" style="height: 100px;"></button>
+                </div>
+                <div class="speech-bubble" id="speech-bubble"><span id="comment-text"></span></div>
+                <div class="avatar-container" id="avatar-container">
+                    <img src="pinkroom.jpg" class="layer bg-layer">
+                    <img src="jiraikei.PNG" class="layer">
+                    <img src="https://i.pinimg.com/originals/fc/8e/68/fc8e686c04e5640d6a2ea9970bef094d.gif" class="sleeping-cat">
+                    <img id="layer-Носки" class="layer" style="display: none;">
+                    <img id="layer-Обувь" class="layer" style="display: none;">
+                    <img id="layer-Низ" class="layer" style="display: none;">
+                    <img id="layer-Верх" class="layer" style="display: none;">
+                    <img id="layer-Набор" class="layer" style="display: none;">
+                    <img id="layer-Волосы" class="layer" style="display: none;">
+                    <img id="layer-acc0" class="layer" style="display: none;">
+                    <img id="layer-acc1" class="layer" style="display: none;">
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar-bg"><div class="progress-fill" id="progress-fill"></div></div>
+                    <div class="progress-text" id="progress-text">0%</div>
+                </div>
+            </div>
+            <div class="right-panel">
+                <div class="category-nav" id="category-nav"></div>
+                <div class="items-grid" id="items-grid"></div>
+            </div>
+        </div>
+
+        <div id="settings-modal" class="notepad-overlay">
+            <div class="notepad-box">
+                <div class="notepad-tab tab-1"></div>
+                <div class="notepad-tab tab-2"></div>
+                <div class="notepad-tab tab-3"></div>
+                <button class="close-notepad" onclick="closeSettings()">✖</button>
+                <div class="notepad-title">Правила</div>
+                <div class="notepad-content">
+                    Добро пожаловать!<br><br>
+                    <b>Делала полтора дня, строго не судим да</b><br>
+                    Это игра переодевашки. На каждом раунде будут задаваться условия, в соответствии с которыми нужно помочь одеться персонажам. Есть шкала удовлетворенности персонажа: неподходящая одежда минусует шкалу, а подходящая - плюсует. Если шкала ниже 50, вы выходите на плохую концовку и не проходите на следующий уровень. Со шкалой 50 и выше ситуация обратная. Удачи!
+                </div>
+                <img src="chibime.PNG" class="chibi-explainer">
+            </div>
+        </div>
+
+        <div id="custom-confirm-modal" class="modal-overlay">
+            <div class="modal-box">
+                <div class="modal-header"><span class="modal-icon">!</span>УВЕДОМЛЕНИЕ</div>
+                <h3 class="modal-title">Сбросить прогресс?</h3>
+                <p class="modal-text">Вы уверены? Весь текущий наряд и настройки будут удалены.</p>
+                <div class="modal-buttons">
+                    <button class="modal-btn btn-no" onclick="closeConfirmModal()">НЕТ</button>
+                    <button class="modal-btn btn-yes" onclick="confirmGoHome()">ДА</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* --- ЗВУКОВОЙ ДВИЖОК --- */
+        const AUDIO_FILES = {
+            bgMusic: 'music.mp3',
+            click: 'click.mp3',
+            categoryClick: 'categoryclick.mp3', 
+            hatePop: 'laugh.mp3',
+            goodPop: 'woww.mp3',
+            drama: 'angry.mp3',
+            happy: 'yee.mp3',
+            sad: 'AH.mp3'
+        };
+
+        const bgmPlayer = new Audio(AUDIO_FILES.bgMusic);
+        bgmPlayer.loop = true;
+        bgmPlayer.volume = 0.2; 
+        let isMusicStarted = false;
+
+        function startAudioContext() {
+            if(!isMusicStarted) {
+                bgmPlayer.play().catch(()=>{});
+                isMusicStarted = true;
+            }
+        }
+
+        function toggleMusic(e) {
+            e.stopPropagation(); 
+            let btn = document.getElementById('music-toggle-btn');
+            if (bgmPlayer.paused) {
+                bgmPlayer.play().catch(()=>{});
+                btn.textContent = '🔊';
+                isMusicStarted = true;
+            } else {
+                bgmPlayer.pause();
+                btn.textContent = '🔈';
+            }
+            playSFX('click');
+        }
+
+        document.body.addEventListener('click', (e) => {
+            const isCategoryBtn = e.target.closest('.category-btn');
+            const isClickable = e.target.closest('button, .start-menu-btn, .png-btn-small, .item-cell, .close-notepad, .lvl-img-back-nav, .level-card, .css-menu-btn');
+            
+            if (isCategoryBtn) {
+                playSFX('categoryClick'); 
+            } else if (isClickable && e.target.id !== 'music-toggle-btn') {
+                playSFX('click'); 
+            }
+        });
+
+        function playSFX(key) {
+            let sfx = new Audio(AUDIO_FILES[key]);
+            sfx.volume = 0.4; 
+            sfx.play().catch(()=>{});
+        }
+
+        const itemsData = {
+            'Волосы': [
+                { id: 'hair1', src: 'onewhite.PNG', icon: 'onewhiteicon.png', comment: 'Прическа не влияет на результат!', points: 0 },
+                { id: 'hair2', src: 'onewhitee.PNG', icon: 'onewhiteeicon.png', comment: 'Прическа не влияет на результат!', points: 0 },
+                { id: 'hair3', src: 'twowhite.PNG', icon: 'twowhiteicon.png', comment: 'Прическа не влияет на результат!', points: 0 },
+                { id: 'hair4', src: 'kawaikute1.PNG', icon: 'kawaikure1icon.png', comment: 'Прическа не влияет на результат!', points: 0 },
+                { id: 'hair5', src: 'kawaikute2.PNG', icon: 'kawaikute2icon.png', comment: 'Прическа не влияет на результат!', points: 0 },
+                { id: 'hair6', src: 'kawaikute.PNG', icon: 'kawaikuteicon.png', comment: 'Прическа не влияет на результат!', points: 0 }
+            ],
+            'Набор': [
+                { id: 'set1', src: 'pink.PNG', icon: 'pinkicon.png', comment: 'Розовенько', points: 20 },
+                { id: 'set2', src: 'normis.PNG', icon: 'normisicon.png', comment: 'Это совсем не джирай..', points: -55 },
+                { id: 'set3', src: 'sabukaru.PNG', icon: 'sabukaruicon.png', comment: 'Это подстиль сабукару, носить можно', points: 20 },
+                { id: 'set4', src: 'princess.PNG', icon: 'princessicon.png', comment: 'Как принцесса', points: 20 },
+                { id: 'set5', src: 'ena.PNG', icon: 'enaicon.png', comment: 'Лимитированная коллекция LisLiza! Обожаю!', points: 20 },
+                { id: 'set6', src: 'futaba.PNG', icon: 'futabaicon.png', comment: 'Чувствую себя Тойоко кидом', points: 20 }
+            ],
+            'Верх': [
+                { id: 'top1', src: 'purple.PNG', icon: 'purpleicon.png', comment: 'Эта блузка слишком зафоршена.', points: 15 },
+                { id: 'top2', src: 'greyjirai.PNG', icon: 'greyjiraiicon.png', comment: 'Вау', points: 20 },
+                { id: 'top3', src: 'Naruto.PNG', icon: 'Narutoicon.png', comment: 'Раз это японский стиль, можно носить с аниме.', points: -55 },
+                { id: 'top4', src: 'enatop.PNG', icon: 'enatopicon.png', comment: 'Нужно будет найти хорошее сочетание.', points: 20 },
+                { id: 'top5', src: 'blouse.PNG', icon: 'blouseicon.png', comment: 'Любая фиолетовая рубашка сойдет, верно?', points: -55 },
+                { id: 'top6', src: 'rabbit.PNG', icon: 'rabbiticon.png', comment: 'Тепло', points: 20 }
+            ],
+            'Низ': [
+                { id: 'bot1', src: 'blacktennis.PNG', icon: 'tennisicon.PNG', comment: 'База, но можно выбрать вариант получше.', points: 10 },
+                { id: 'bot2', src: 'greyskirt.PNG', icon: 'greyskirticon.png', comment: 'Необычно', points: 20 },
+                { id: 'bot3', src: 'jiraiskirt.PNG', icon: 'blackskirticon.png', comment: 'Красота.', points: 20 },
+                { id: 'bot4', src: 'nonjiraipants.PNG', icon: 'pantsicon.PNG', comment: 'Не хочу носить юбки', points: -10 }
+            ],
+            'Носки': [
+                { id: 'socks1', src: 'noskijirai.PNG', icon: 'noskijiraiicon.png', comment: 'Отлично Прям по стилю XD.', points: 15 },
+                { id: 'socks2', src: 'whitehigh.PNG', icon: 'whitehighicon.png', comment: 'Неплохо', points: 15 },
+                { id: 'socks3', src: 'blackhigh.PNG', icon: 'blackhighicon.png', comment: 'Мне нравится.', points: 15 },
+                { id: 'socks4', src: 'cutecore.PNG', icon: 'cutecoreicon.png', comment: 'Это кьюткор, а не джирай..', points: -30 },
+                { id: 'socks5', src: 'warmers.PNG', icon: 'warmersicon.png', comment: 'Говорят, что не по стилю, но мне нравится.', points: 5 },
+                { id: 'socks6', src: 'heartsocks.PNG', icon: 'heartsocksicon.png', comment: 'Простенько)', points: 15 }
+            ],
+            'Обувь': [
+                { id: 'shoes1', src: 'maryjane.PNG', icon: 'maryjaneicon.png', comment: 'Туфли мери джейн это классика для всего', points: 15 },
+                { id: 'shoes2', src: 'newrock.PNG', icon: 'newrockicon.png', comment: 'Надеюсь никто не узнает, что это паль', points: 15 },
+                { id: 'shoes3', src: 'pinkjiraishoes.PNG', icon: 'pinkjiraishoesicon.png', comment: 'Не со всем подойдет', points: 15 },
+                { id: 'shoes4', src: 'jiraishoes.PNG', icon: 'jiraishoesicon.png', comment: 'База', points: 15 },
+                { id: 'shoes5', src: 'heels.PNG', icon: 'heelsicon.png', comment: 'Мама сказала, что мне идут эти туфли.', points: -10 },
+                { id: 'shoes6', src: 'duck.PNG', icon: 'duckicon.png', comment: 'Отлично подойдут к подстилю сабукару', points: 15 },
+                { id: 'shoes7', src: 'asics.PNG', icon: 'asicsicon.png', comment: 'В спортивно обуви намного удобнее.', points: -30 },
+                { id: 'shoes8', src: 'punk.PNG', icon: 'punkicon.png', comment: 'Не совсем джирай, но можно хорошо сочетать', points: 10 },
+                { id: 'shoes9', src: 'sportblack.PNG', icon: 'sportblackicon.png', comment: 'Ничего лучше не нашлось?', points: 5 },
+                { id: 'shoes10', src: 'pickcross.PNG', icon: 'pickcrossicon.png', comment: 'Очень мило', points: 15 }
+            ],
+            'Аксессуары': [
+                { id: 'acc1', src: 'hairclip.PNG', icon: 'hairclipicon.png', comment: 'Не воспринимаю себя без заколки', points: 15 },
+                { id: 'acc2', src: 'bagblack.PNG', icon: 'bagblackicon.png', comment: 'Куда я без сумки?', points: 10 },
+                { id: 'acc3', src: 'bagheart.PNG', icon: 'baghearticon.png', comment: 'Эта сумка маловата"', points: 5 },
+                { id: 'acc4', src: 'stars.PNG', icon: 'starsicon.png', comment: 'Других заколок я не нашла', points: -10 },
+                { id: 'acc5', src: 'melodybag.PNG', icon: 'melodybagicon.png', comment: 'Маловата сумочка', points: 10 },
+                { id: 'acc6', src: 'keychain.PNG', icon: 'keychainicon.png', comment: 'Мило и не бросается в глаза', points: 10 },
+                { id: 'acc7', src: 'phone.PNG', icon: 'phoneicon.png', comment: 'Куда я без телефона', points: 10 },
+                { id: 'acc8', src: 'melodyhead.PNG', icon: 'melodyheadicon.png', comment: 'Рождена ходить так по диснейленду', points: 10 },
+                { id: 'acc9', src: 'neck.PNG', icon: 'neckicon.png', comment: 'Мило дополняет образ~', points: 10 },
+                { id: 'acc10', src: 'kuromi.PNG', icon: 'kuromiicon.png', comment: 'Мне нужна компания', points: 10 }
+            ]
+        };
+
+        const categories = ['Волосы', 'Набор', 'Верх', 'Низ', 'Носки', 'Обувь', 'Аксессуары'];
+        let equippedItems = { 'Волосы': null, 'Набор': null, 'Верх': null, 'Низ': null, 'Носки': null, 'Обувь': null, 'Аксессуары': [null, null] };
+        let currentCategory = 'Волосы';
+        let currentTotalScore = 0;
+        let commentTimeout;
+
+        function initGame() { preloadImages(); renderCategoryNav(); renderGrid(currentCategory); calculateScore(true); }
+        function preloadImages() { const imagesToLoad = ['pinkroom.jpg', 'jiraikei.PNG', 'green.jpg', 'messy.PNG', 'sadface.PNG', 'rightuh.jpg']; for (let cat in itemsData) { itemsData[cat].forEach(item => { imagesToLoad.push(item.src); imagesToLoad.push(item.icon); }); } imagesToLoad.forEach(src => { const img = new Image(); img.src = src; }); }
+        
+        function showLevelsMenu() { 
+            document.getElementById('start-screen').style.opacity = '0'; 
+            setTimeout(() => { 
+                document.getElementById('start-screen').style.visibility = 'hidden'; 
+                document.getElementById('levels-screen').classList.add('show'); 
+                startAudioContext();
+            }, 800); 
+        }
+
+        function backToMainMenu() { document.getElementById('levels-screen').classList.remove('show'); document.getElementById('game-ui').classList.remove('active'); const startScreen = document.getElementById('start-screen'); startScreen.style.visibility = 'visible'; startScreen.style.opacity = '1'; }
+        
+        function renderCategoryNav() { const nav = document.getElementById('category-nav'); nav.innerHTML = ''; categories.forEach(cat => { const btn = document.createElement('button'); btn.className = `category-btn ${cat === currentCategory ? 'active' : ''}`; btn.textContent = cat; btn.onclick = () => { currentCategory = cat; renderCategoryNav(); renderGrid(cat); }; nav.appendChild(btn); }); }
+        
+        function renderGrid(category) {
+            const grid = document.getElementById('items-grid');
+            const savedScroll = grid.scrollTop; 
+            grid.innerHTML = ''; 
+            const fragment = document.createDocumentFragment(); 
+            const items = itemsData[category] || [];
+            items.forEach(item => {
+                const cell = document.createElement('div');
+                cell.className = 'item-cell';
+                let isEquipped = category === 'Аксессуары' ? equippedItems[category].includes(item.id) : equippedItems[category] === item.id;
+                if (isEquipped) cell.classList.add('equipped');
+                cell.innerHTML = `<img src="${item.icon}" loading="lazy">`;
+                cell.onclick = () => toggleItem(category, item);
+                fragment.appendChild(cell);
+            });
+            grid.appendChild(fragment);
+            grid.scrollTop = savedScroll; 
+        }
+
+        function toggleItem(category, item) {
+            if (category === 'Аксессуары') {
+                const index = equippedItems[category].indexOf(item.id);
+                if (index > -1) { equippedItems[category][index] = null; } 
+                else {
+                    let emptyIndex = equippedItems[category].indexOf(null);
+                    if (emptyIndex > -1) { equippedItems[category][emptyIndex] = item.id; } 
+                    else { equippedItems[category][0] = item.id; }
+                    showComment(item.comment);
+                }
+            } else {
+                if (equippedItems[category] === item.id) { equippedItems[category] = null; } 
+                else {
+                    equippedItems[category] = item.id;
+                    showComment(item.comment);
+                    if (category === 'Набор') { equippedItems['Верх'] = null; equippedItems['Низ'] = null; } 
+                    else if (category === 'Верх' || category === 'Низ') { equippedItems['Набор'] = null; }
+                }
+            }
+            renderGrid(category); updateAvatar(); calculateScore();
+        }
+
+        function updateLayerWithAnim(layerId, itemId, categoryData) {
+            const imgEl = document.getElementById(layerId);
+            if (itemId) {
+                const item = categoryData.find(i => i.id === itemId);
+                if (item) {
+                    if (imgEl.src.indexOf(item.src) === -1 || imgEl.style.display === 'none') {
+                        imgEl.src = item.src; imgEl.style.display = 'block';
+                        imgEl.classList.remove('cloth-anim'); void imgEl.offsetWidth; imgEl.classList.add('cloth-anim');
+                    }
+                }
+            } else { imgEl.style.display = 'none'; }
+        }
+
+        function updateAvatar() {
+            ['Носки', 'Обувь', 'Низ', 'Верх', 'Набор', 'Волосы'].forEach(cat => updateLayerWithAnim(`layer-${cat}`, equippedItems[cat], itemsData[cat]));
+            updateLayerWithAnim('layer-acc0', equippedItems['Аксессуары'][0], itemsData['Аксессуары']);
+            updateLayerWithAnim('layer-acc1', equippedItems['Аксессуары'][1], itemsData['Аксессуары']);
+        }
+
+        function startLevel1() {
+            document.getElementById('levels-screen').classList.remove('show');
+            const cutscene = document.getElementById('cutscene-view');
+            const dialogue = document.getElementById('cutscene-dialogue');
+            const char = document.getElementById('cutscene-char');
+            const charIdle = document.getElementById('char-idle');
+            const faceIntro = document.getElementById('cutscene-face-intro');
+            const text = document.getElementById('cutscene-text');
+            const commentsBox = document.getElementById('flying-comments-container');
+            const curtains = document.getElementById('curtains');
+            const resultOverlay = document.getElementById('ending-result-overlay');
+            
+            char.classList.remove('shake-anim', 'pop-up');
+            charIdle.classList.remove('breathing');
+            dialogue.classList.remove('show');
+            faceIntro.style.display = 'none';
+            text.textContent = '';
+            commentsBox.innerHTML = '';
+            resultOverlay.classList.remove('show');
+
+            document.getElementById('intro-avatar-group').style.display = 'block';
+            document.getElementById('ending-avatar-group').style.display = 'none';
+            
+            cutscene.style.display = 'block';
+
+            setTimeout(() => { dialogue.classList.add('show'); }, 300);
+
+            setTimeout(() => {
+                char.classList.add('pop-up');
+                setTimeout(() => { charIdle.classList.add('breathing'); }, 600);
+            }, 800);
+
+            setTimeout(() => { text.textContent = 'Всем привет, я новая джирайка!'; }, 1500);
+
+            setTimeout(() => {
+                const introWords = ['Фууу!', 'Волосы расчеши', 'Ужас какой', 'Кринж', ' Пытается быть някодан', 'Ливни с комьюнити', 'Жду в подслушке'];
+                const introNames = ['diaxxus', 'fluhxpluh', 'wxan', 'Methiis', 'ssoranya', 'eluchan', 'sillywilly'];
+
+                for(let i = 0; i < 7; i++) {
+                    setTimeout(() => {
+                        let el = document.createElement('div');
+                        el.className = 'toxic-comment';
+                        
+                        let hater = introNames[i % introNames.length];
+                        let word = introWords[i % introWords.length];
+                        
+                        el.innerHTML = `<div class="toxic-comment-header"><div class="toxic-avatar"></div><span>@${hater}</span></div><div class="toxic-text">${word}</div>`;
+                        
+                        let isLeft = Math.random() > 0.5;
+                        let startX = isLeft ? (5 + Math.random() * 20) : (65 + Math.random() * 20);
+                        let startY = 20 + Math.random() * 50; 
+                        
+                        el.style.left = startX + '%';
+                        el.style.top = startY + '%';
+                        
+                        commentsBox.appendChild(el);
+
+                        playSFX('hatePop');
+
+                    }, i * 650); 
+                }
+
+                setTimeout(() => {
+                    charIdle.classList.remove('breathing'); 
+                    faceIntro.style.display = 'block'; 
+                    char.classList.add('shake-anim'); 
+                    text.textContent = 'Я вам еще покажу...';
+
+                    playSFX('drama');
+
+                    setTimeout(() => {
+                        curtains.classList.add('closed');
+                        
+                        setTimeout(() => {
+                            cutscene.style.display = 'none';
+                            document.getElementById('game-ui').classList.add('active');
+                            initGame();
+                            curtains.classList.remove('closed');
+                        }, 1200);
+
+                    }, 2500);
+
+                }, 5000); 
+
+            }, 3000);
+        }
+
+        function finishGame() {
+            const curtains = document.getElementById('curtains');
+            curtains.classList.add('closed'); 
+
+            setTimeout(() => {
+                document.getElementById('game-ui').classList.remove('active');
+                
+                const cutscene = document.getElementById('cutscene-view');
+                const dialogue = document.getElementById('cutscene-dialogue');
+                const char = document.getElementById('cutscene-char');
+                const charIdle = document.getElementById('char-idle');
+                const text = document.getElementById('cutscene-text');
+                const commentsBox = document.getElementById('flying-comments-container');
+                const faceEnd = document.getElementById('cutscene-face-end');
+                
+                char.classList.remove('shake-anim', 'pop-up');
+                charIdle.classList.remove('breathing');
+                dialogue.classList.remove('show');
+                text.textContent = '';
+                commentsBox.innerHTML = '';
+                faceEnd.style.display = 'none';
+
+                document.getElementById('intro-avatar-group').style.display = 'none';
+                document.getElementById('ending-avatar-group').style.display = 'block';
+
+                ['Носки', 'Обувь', 'Низ', 'Верх', 'Набор', 'Волосы'].forEach(cat => {
+                    const el = document.getElementById(`end-layer-${cat}`);
+                    if(equippedItems[cat]) {
+                        el.src = itemsData[cat].find(i => i.id === equippedItems[cat]).src;
+                        el.style.display = 'block';
+                    } else {
+                        el.style.display = 'none';
+                    }
+                });
+                for(let i=0; i<2; i++) {
+                    const el = document.getElementById(`end-layer-acc${i}`);
+                    if(equippedItems['Аксессуары'][i]) {
+                        el.src = itemsData['Аксессуары'].find(x => x.id === equippedItems['Аксессуары'][i]).src;
+                        el.style.display = 'block';
+                    } else {
+                        el.style.display = 'none';
+                    }
+                }
+
+                cutscene.style.display = 'block';
+                curtains.classList.remove('closed');
+
+                setTimeout(() => { dialogue.classList.add('show'); }, 1000);
+
+                setTimeout(() => {
+                    char.classList.add('pop-up');
+                    setTimeout(() => { charIdle.classList.add('breathing'); }, 600);
+                }, 1500);
+
+                setTimeout(() => { text.textContent = 'Оцените мой лук!'; }, 2200);
+
+                setTimeout(() => {
+                    let endWords = [];
+                    if (currentTotalScore >= 50) {
+                        endWords = ['Вау!', 'Какая милашка!', 'Ух тыы', 'Где купила?', 'Красотка <3', 'Имбаа', '10/10'];
+                    } else {
+                        endWords = ['Фууу', 'Кринжулькинс', 'ХАХАХАХА', 'Сними это', 'Ужасно', 'Не позорь комьюнити', 'Мда'];
+                    }
+                    
+                    const endNames = ['konoka_chan', 'diaxxus', 'ssoranya', 'fluhxpluh', 'wxan', 'vhs', 'kimchi'];
+
+                    for(let i = 0; i < 7; i++) {
+                        setTimeout(() => {
+                            let el = document.createElement('div');
+                            el.className = 'toxic-comment';
+                            
+                            let hater = endNames[i % endNames.length];
+                            let word = endWords[i % endWords.length];
+                            
+                            el.innerHTML = `<div class="toxic-comment-header"><div class="toxic-avatar"></div><span>@${hater}</span></div><div class="toxic-text">${word}</div>`;
+                            
+                            let isLeft = Math.random() > 0.5;
+                            let startX = isLeft ? (5 + Math.random() * 20) : (65 + Math.random() * 20);
+                            let startY = 20 + Math.random() * 50; 
+                            el.style.left = startX + '%';
+                            el.style.top = startY + '%';
+                            
+                            commentsBox.appendChild(el);
+
+                            if (currentTotalScore >= 50) {
+                                playSFX('goodPop');
+                            } else {
+                                playSFX('hatePop');
+                            }
+
+                        }, i * 650); 
+                    }
+
+                    setTimeout(() => {
+                        if (currentTotalScore < 50) {
+                            charIdle.classList.remove('breathing'); 
+                            faceEnd.style.display = 'block'; 
+                            char.classList.add('shake-anim'); 
+                            text.textContent = 'Блин... Опять смеются...';
+                            
+                            playSFX('sad');
+                        } else {
+                            text.textContent = 'Ура ура!';
+
+                            playSFX('happy');
+                        }
+
+                        setTimeout(() => {
+                            const resultOverlay = document.getElementById('ending-result-overlay');
+                            const title = document.getElementById('ending-title');
+                            const subtitle = document.getElementById('ending-subtitle');
+                            const scoreText = document.getElementById('ending-score');
+                            const btnRestart = document.getElementById('btn-restart-end');
+
+                            scoreText.textContent = currentTotalScore + '%';
+
+                            if (currentTotalScore >= 50) {
+                                title.textContent = 'УРОВЕНЬ ПРОЙДЕН!';
+                                title.style.color = '#333';
+                                scoreText.style.color = '#f48fb1';
+                                subtitle.textContent = 'Теперь ты официально джирайка)';
+                                btnRestart.style.display = 'none'; 
+                            } else {
+                                title.textContent = 'FAIL...';
+                                title.style.color = '#7986cb'; 
+                                scoreText.style.color = '#7986cb';
+                                subtitle.textContent = 'Жди себя в подслушке';
+                                btnRestart.style.display = 'block'; 
+                            }
+
+                            resultOverlay.classList.add('show');
+                        }, 1500);
+
+                    }, 5000); 
+
+                }, 3700);
+
+            }, 1200); 
+        }
+
+        function restartLevel() {
+            document.getElementById('ending-result-overlay').classList.remove('show');
+            document.getElementById('cutscene-view').style.display = 'none';
+            document.getElementById('game-ui').classList.add('active');
+            
+            equippedItems = { 'Волосы': null, 'Набор': null, 'Верх': null, 'Низ': null, 'Носки': null, 'Обувь': null, 'Аксессуары': [null, null] };
+            updateAvatar();
+            calculateScore(true);
+        }
+
+        function backToMainMenuFromEnd() {
+            document.getElementById('ending-result-overlay').classList.remove('show');
+            document.getElementById('cutscene-view').style.display = 'none';
+            document.getElementById('start-screen').style.visibility = 'visible';
+            document.getElementById('start-screen').style.opacity = '1';
+            
+            equippedItems = { 'Волосы': null, 'Набор': null, 'Верх': null, 'Низ': null, 'Носки': null, 'Обувь': null, 'Аксессуары': [null, null] };
+            updateAvatar();
+            calculateScore(true);
+        }
+
+        function openSettings() { document.getElementById('settings-modal').classList.add('show'); }
+        function closeSettings() { document.getElementById('settings-modal').classList.remove('show'); }
+        function openConfirmModal() { document.getElementById('custom-confirm-modal').classList.add('show'); }
+        function closeConfirmModal() { document.getElementById('custom-confirm-modal').classList.remove('show'); }
+        function confirmGoHome() { closeConfirmModal(); equippedItems = { 'Волосы': null, 'Набор': null, 'Верх': null, 'Низ': null, 'Носки': null, 'Обувь': null, 'Аксессуары': [null, null] }; updateAvatar(); calculateScore(true); document.getElementById('game-ui').classList.remove('active'); document.getElementById('levels-screen').classList.add('show'); }
+
+        function showFloatingDelta(delta) {
+            const container = document.querySelector('.progress-container');
+            const floatEl = document.createElement('div');
+            floatEl.className = 'floating-score ' + (delta > 0 ? 'float-plus' : 'float-minus');
+            floatEl.textContent = delta > 0 ? `+${delta}` : `${delta}`;
+            container.appendChild(floatEl);
+            setTimeout(() => { floatEl.remove(); }, 1500); 
+        }
+
+        function calculateScore(isInit = false) {
+            let score = 0;
+            categories.forEach(cat => {
+                if (cat === 'Аксессуары') { equippedItems[cat].forEach(id => { if (id) score += itemsData[cat].find(i => i.id === id).points; }); } 
+                else if (equippedItems[cat]) { score += itemsData[cat].find(i => i.id === equippedItems[cat]).points; }
+            });
+            if (score > 100) score = 100;
+            let delta = score - currentTotalScore;
+            if (!isInit && delta !== 0) showFloatingDelta(delta);
+            currentTotalScore = score;
+            document.getElementById('progress-fill').style.width = `${Math.max(0, score)}%`;
+            document.getElementById('progress-text').textContent = `${score}%`;
+        }
+
+        function showComment(text) {
+            if (!text) return;
+            const bubble = document.getElementById('speech-bubble');
+            document.getElementById('comment-text').textContent = text;
+            bubble.classList.remove('show'); void bubble.offsetWidth; bubble.classList.add('show');
+            clearTimeout(commentTimeout); commentTimeout = setTimeout(() => { bubble.classList.remove('show'); }, 3000); 
+        }
+    </script>
+</body>
+</html>
